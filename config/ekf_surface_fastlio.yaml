@@ -1,0 +1,70 @@
+ekf_filter_node:
+  ros__parameters:
+    frequency: 30.0
+    sensor_timeout: 0.2
+    two_d_mode: true
+    publish_tf: true
+    map_frame: blueboat/map
+    odom_frame: blueboat/odom
+    base_link_frame: blueboat/base_link_enu
+    world_frame: blueboat/map
+
+    odom0: /blueboat/fastlio/odometry
+    odom0_config: [true,  true,  false,
+                   false, false, true,
+                   true,  true,  false,
+                   false, false, true,
+                   false, false, false]
+    odom0_differential: false
+    odom0_relative: false
+    odom0_queue_size: 10
+
+    # odom1: /blueboat/sensors/gps/odometry
+    # odom1_config: [true,  true,  false,
+    #                false, false, false,
+    #                false, false, false,
+    #                false, false, false,
+    #                false, false, false]
+    # odom1_differential: false
+    # odom1_relative: false
+    # odom1_queue_size: 10
+    # odom1_pose_rejection_threshold: 10.0
+
+    # imu0: /blueboat/sensors/mag/imu_enu
+    # imu0_config: [false, false, false,
+    #               false, false, true,
+    #               false, false, false,
+    #               false, false, false,
+    #               false, false, false]
+    # imu0_differential: false
+    # imu0_relative: false
+    # imu0_queue_size: 10
+    # imu0_pose_rejection_threshold: 0.5
+    # imu0_remove_gravitational_acceleration: true
+
+navsat_transform_node:
+  ros__parameters:
+    frequency: 10.0
+    delay: 0.0
+    magnetic_declination_radians: 0.0
+    yaw_offset: 0.0
+    zero_altitude: true
+    publish_filtered_gps: true
+    use_odometry_yaw: true
+    wait_for_datum: true
+    broadcast_utm_transform: false
+    broadcast_utm_transform_as_parent_frame: false
+
+gps_anchor_node:
+  ros__parameters:
+    world_frame: world_enu
+    origin_mode: manual
+    origin_latitude: 39.9699390
+    origin_longitude: 0.0139927
+    origin_altitude: 0.0
+    anchor_sample_count: 30
+    max_horizontal_accuracy_m: 20.0
+    log_invalid_fixes: false
+    yaw_offset_rad: 0.0
+    publish_path: true
+    max_path_size: 1000

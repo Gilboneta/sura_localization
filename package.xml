@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>sura_localization</name>
+  <version>0.0.0</version>
+  <description>SURA localization and sensor fusion launch package</description>
+  <maintainer email="al435568@uji.es">usuario</maintainer>
+  <license>TODO: License declaration</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>cirtesu_tank_aruco_localization</exec_depend>
+  <depend>geometry_msgs</depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <depend>nav_msgs</depend>
+  <depend>sura_msgs</depend>
+  <depend>rclcpp</depend>
+  <exec_depend>robot_localization</exec_depend>
+  <depend>sensor_msgs</depend>
+  <exec_depend>tf2_ros</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

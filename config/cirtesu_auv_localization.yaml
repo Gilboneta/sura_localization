@@ -1,0 +1,97 @@
+ekf_filter_node:
+  ros__parameters:
+    frequency: 50.0
+    sensor_timeout: 0.1
+    two_d_mode: false
+    publish_tf: false
+    map_frame: bluerov/map
+    odom_frame: bluerov/odom
+    base_link_frame: bluerov/base_link
+    world_frame: bluerov/map
+
+    pose0: sensors/pressure/pose
+    pose0_config: [false, false, true,
+                   false, false, false,
+                   false, false, false,
+                   false, false, false,
+                   false, false, false]
+    pose0_differential: false
+    pose0_relative: false
+    pose0_queue_size: 3
+
+    pose1: sensors/aruco/pose_enu
+    pose1_config: [true, true, false,
+                   false, false, false,
+                   false, false, false,
+                   false, false, false,
+                   false, false, false]
+    pose1_differential: false
+    pose1_relative: false
+    pose1_queue_size: 1
+    pose1_rejection_threshold: 2.0
+
+    pose2: sensors/aruco/pose_enu
+    pose2_config: [false, false, false,
+                   false, false, true,
+                   false, false, false,
+                   false, false, false,
+                   false, false, false]
+    pose2_differential: false
+    pose2_relative: false
+    pose2_queue_size: 1
+    pose2_rejection_threshold: 2.0
+
+    odom0: sensors/gps/odometry
+    odom0_config: [true, true, false,
+                   false, false, false,
+                   false, false, false,
+                   false, false, false,
+                   false, false, false]
+    odom0_differential: false
+    odom0_relative: false
+    odom0_queue_size: 3
+
+    twist0: sensors/dvl/twist
+    twist0_config: [false, false, false,
+                    false, false, false,
+                    true, true, false,
+                    false, false, false,
+                    false, false, false]
+    twist0_differential: false
+    twist0_relative: false
+    twist0_queue_size: 3
+
+    imu0: sensors/imu_enu
+    imu0_config: [false, false, false,
+                  true,  true,  false,
+                  false, false, false,
+                  false, false, false,
+                  false, false, false]
+    imu0_differential: false
+    imu0_relative: false
+    imu0_queue_size: 5
+    imu0_remove_gravitational_acceleration: false
+
+    imu1: sensors/imu_enu
+    imu1_config: [false, false, false,
+                  false,  false,  true,
+                  false, false, false,
+                  false,  false, false,
+                  false, false, false]
+    imu1_differential: true
+    imu1_relative: false
+    imu1_queue_size: 5
+    imu1_remove_gravitational_acceleration: false
+
+navsat_transform_node:
+  ros__parameters:
+    frequency: 10.0
+    delay: 0.0
+    magnetic_declination_radians: 0.0
+    yaw_offset: 0.0
+    zero_altitude: true
+    publish_filtered_gps: true
+    use_odometry_yaw: true
+    wait_for_datum: false
+    broadcast_utm_transform: false
+    broadcast_utm_transform_as_parent_frame: false
