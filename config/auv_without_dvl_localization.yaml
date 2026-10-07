@@ -70,5 +70,5 @@ ekf_filter_node:
                    false, false, false,
                    false, false, false]
     odom0_differential: false
-    odom0_relative: false
+    odom0_relative: true
     odom0_queue_size: 3

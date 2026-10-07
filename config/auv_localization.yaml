@@ -9,7 +9,7 @@ ekf_filter_node:
     base_link_frame: base_link
     world_frame: map
 
-    pose0: sensors/pressure/pose
+    pose0: sensors/pressure/pose_enu
     pose0_config: [false,  false,  true,
                    false, false, false,
                    false, false, false,
