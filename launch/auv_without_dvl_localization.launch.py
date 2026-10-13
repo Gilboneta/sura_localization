@@ -167,20 +167,13 @@ def launch_setup(context, *args, **kwargs):
 
         Node(
             package="sura_localization",
-            executable="simple_observer",
-            name="simple_observer",
-            output="screen",
-        ),
-
-        Node(
-            package="sura_localization",
             executable="ned_to_enu_odometry",
             name="ned_to_enu_odometry",
             output="screen",
             parameters=[
                 {
-                    "input_topic": "/state_observer/predicted_odometry",
-                    "output_topic": "/state_observer/predicted_odometry_enu",
+                    "input_topic": "/bluerov/simple_observer/predicted_odometry",
+                    "output_topic": "/bluerov/simple_observer/predicted_odometry_enu",
                     "frame_id": namespaced_frame(robot_namespace, "map/enu"),
                     "child_frame_id": namespaced_frame(robot_namespace, "base_link_flu"),
                 }
