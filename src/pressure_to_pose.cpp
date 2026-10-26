@@ -17,9 +17,9 @@ public:
   : Node("pressure_to_pose")
   {
     declare_parameter<std::string>("input_topic", "sensors/pressure");
-    declare_parameter<std::string>("output_topic", "sensors/pressure/pose_enu");
+    declare_parameter<std::string>("output_topic", "sensors/pressure/pose_ned");
     declare_parameter<std::string>("environment", "real");
-    declare_parameter<std::string>("frame_id", "world_enu");
+    declare_parameter<std::string>("frame_id", "world_ned");
     declare_parameter<std::string>("sensor_frame_id", "");
     declare_parameter<bool>("positive_down", true);
     declare_parameter<double>("surface_pressure_pa", 101325.0);
@@ -81,7 +81,7 @@ private:
     }
 
     const bool positive_down = get_parameter("positive_down").as_bool();
-    const double raw_z = positive_down ? -depth : depth;
+    const double raw_z = positive_down ? depth : -depth;
     const double z = raw_z * get_parameter("z_scale").as_double() +
       get_parameter("z_offset_m").as_double();
 

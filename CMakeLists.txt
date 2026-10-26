@@ -13,7 +13,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(sura_msgs REQUIRED)
 
-foreach(target imu_ned_to_enu enu_to_ned_odometry pressure_to_pose ned_to_enu_odometry simple_observer)
+foreach(target imu_ned_to_enu enu_to_ned_odometry pressure_to_pose)
   add_executable(${target} src/${target}.cpp)
   ament_target_dependencies(${target}
     geometry_msgs
@@ -25,14 +25,10 @@ foreach(target imu_ned_to_enu enu_to_ned_odometry pressure_to_pose ned_to_enu_od
   target_compile_features(${target} PUBLIC cxx_std_17)
 endforeach()
 
-target_link_libraries(simple_observer Eigen3::Eigen)
-
 install(TARGETS
   imu_ned_to_enu
   enu_to_ned_odometry
   pressure_to_pose
-  ned_to_enu_odometry
-  simple_observer
   DESTINATION lib/${PROJECT_NAME}
 )
 

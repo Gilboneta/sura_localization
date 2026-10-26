@@ -9,7 +9,7 @@ ekf_filter_node:
     base_link_frame: bluerov/base_link
     world_frame: bluerov/map
 
-    pose0: sensors/pressure/pose_enu
+    pose0: sensors/pressure/pose_ned
     pose0_config: [false, false, true,
                    false, false, false,
                    false, false, false,
@@ -19,7 +19,7 @@ ekf_filter_node:
     pose0_relative: false
     pose0_queue_size: 3
 
-    pose1: sensors/aruco/pose_enu
+    pose1: sensors/aruco/pose_ned
     pose1_config: [true, true, false,
                    false, false, false,
                    false, false, false,
@@ -28,9 +28,11 @@ ekf_filter_node:
     pose1_differential: false
     pose1_relative: false
     pose1_queue_size: 1
+    # ArUco is an absolute position update. A 2-sigma gate rejects valid
+    # corrections when the observer has accumulated drift while out of view.
     pose1_rejection_threshold: 2.0
 
-    pose2: sensors/aruco/pose_enu
+    pose2: sensors/aruco/pose_ned
     pose2_config: [false, false, false,
                    false, false, true,
                    false, false, false,
@@ -39,9 +41,10 @@ ekf_filter_node:
     pose2_differential: false
     pose2_relative: false
     pose2_queue_size: 1
+    # Same gate for the yaw measurement coming from the same ArUco estimate.
     pose2_rejection_threshold: 2.0
 
-    imu0: sensors/imu_enu
+    imu0: sensors/imu
     imu0_config: [false, false, false,
                   true,  true,  false,
                   false, false, false,
@@ -52,7 +55,7 @@ ekf_filter_node:
     imu0_queue_size: 5
     imu0_remove_gravitational_acceleration: false
 
-    imu1: sensors/imu_enu
+    imu1: sensors/imu
     imu1_config: [false, false, false,
                   false,  false,  true,
                   false, false, false,
@@ -63,12 +66,12 @@ ekf_filter_node:
     imu1_queue_size: 5
     imu1_remove_gravitational_acceleration: false
 
-    odom0: /bluerov/simple_observer/predicted_odometry_enu
-    odom0_config: [true, true, false,
+    odom0: /bluerov/simple_observer/predicted_odometry
+    odom0_config: [false, false, false,
                    false, false, false,
                    true, true, false,
                    false, false, false,
                    false, false, false]
-    odom0_differential: false
+    odom0_differential: true
     odom0_relative: false
     odom0_queue_size: 3
