@@ -6,31 +6,57 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
-find_package(geometry_msgs REQUIRED)
-find_package(nav_msgs REQUIRED)
+find_package(controller_interface REQUIRED)
+find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(sensor_msgs REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
 
-foreach(target imu_ned_to_enu enu_to_ned_odometry pressure_to_pose)
-  add_executable(${target} src/${target}.cpp)
-  ament_target_dependencies(${target}
-    geometry_msgs
-    nav_msgs
-    rclcpp
-    sensor_msgs
-  )
-  target_compile_features(${target} PUBLIC cxx_std_17)
-endforeach()
-
-install(TARGETS
-  imu_ned_to_enu
-  enu_to_ned_odometry
-  pressure_to_pose
-  DESTINATION lib/${PROJECT_NAME}
+add_library(${PROJECT_NAME} SHARED
+  src/controllers/madgwick_controller.cpp
+  src/controllers/ekf_controller.cpp
 )
 
-install(DIRECTORY launch config
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
+
+target_include_directories(${PROJECT_NAME} PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
+ament_target_dependencies(${PROJECT_NAME}
+  controller_interface
+  pluginlib
+  rclcpp
+  rclcpp_lifecycle
+)
+
+pluginlib_export_plugin_description_file(
+  controller_interface
+  sura_localization_plugins.xml
+)
+
+install(
+  TARGETS ${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+install(
+  DIRECTORY include/
+  DESTINATION include
+)
+
+install(
+  FILES sura_localization_plugins.xml
   DESTINATION share/${PROJECT_NAME}
+)
+
+ament_export_dependencies(
+  controller_interface
+  pluginlib
+  rclcpp
+  rclcpp_lifecycle
 )
 
 ament_package()

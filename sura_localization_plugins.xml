@@ -1,0 +1,15 @@
+<library path="sura_localization">
+  <class
+    name="sura_localization/MadgwickController"
+    type="sura_localization::controllers::MadgwickController"
+    base_class_type="controller_interface::ControllerInterface">
+    <description>Madgwick-based controller for AUV attitude estimation from inertial measurements.</description>
+  </class>
+
+  <class
+    name="sura_localization/EkfController"
+    type="sura_localization::controllers::EkfController"
+    base_class_type="controller_interface::ControllerInterface">
+    <description>Extended Kalman Filter controller for fusing AUV navigation sensor measurements.</description>
+  </class>
+</library>
