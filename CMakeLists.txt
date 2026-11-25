@@ -7,12 +7,14 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(controller_interface REQUIRED)
+find_package(Eigen3 REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
   src/controllers/madgwick_controller.cpp
+  src/controllers/madgwick_filter.cpp
   src/controllers/ekf_controller.cpp
 )
 
@@ -28,6 +30,10 @@ ament_target_dependencies(${PROJECT_NAME}
   pluginlib
   rclcpp
   rclcpp_lifecycle
+)
+
+target_link_libraries(${PROJECT_NAME}
+  Eigen3::Eigen
 )
 
 pluginlib_export_plugin_description_file(

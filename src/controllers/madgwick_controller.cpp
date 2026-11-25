@@ -106,7 +106,7 @@ controller_interface::return_type MadgwickController::update(
   gyro_y_ = read_interface(state_interface_indices_.gyro_y);
   gyro_z_ = read_interface(state_interface_indices_.gyro_z);
 
-  acceleration_x_ = read_interface(state_ion_configurenterface_indices_.acceleration_x);
+  acceleration_x_ = read_interface(state_interface_indices_.acceleration_x);
   acceleration_y_ = read_interface(state_interface_indices_.acceleration_y);
   acceleration_z_ = read_interface(state_interface_indices_.acceleration_z);
 
