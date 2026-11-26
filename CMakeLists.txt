@@ -8,9 +8,12 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(controller_interface REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
+find_package(realtime_tools REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
   src/controllers/madgwick_controller.cpp
@@ -30,10 +33,27 @@ ament_target_dependencies(${PROJECT_NAME}
   pluginlib
   rclcpp
   rclcpp_lifecycle
+  realtime_tools
+  sensor_msgs
 )
 
 target_link_libraries(${PROJECT_NAME}
   Eigen3::Eigen
+)
+
+add_executable(quaternion_to_rpy_node
+  src/nodes/quaternion_to_rpy_node.cpp
+)
+target_compile_features(quaternion_to_rpy_node PUBLIC cxx_std_17)
+ament_target_dependencies(quaternion_to_rpy_node
+  geometry_msgs
+  rclcpp
+  sensor_msgs
+)
+
+install(
+  TARGETS quaternion_to_rpy_node
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 pluginlib_export_plugin_description_file(
@@ -63,6 +83,8 @@ ament_export_dependencies(
   pluginlib
   rclcpp
   rclcpp_lifecycle
+  realtime_tools
+  sensor_msgs
 )
 
 ament_package()

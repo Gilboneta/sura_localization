@@ -15,6 +15,12 @@ controller_interface::CallbackReturn MadgwickController::on_init()
   try {
     auto_declare<std::string>("imu_sensor_name", "imu_sensor");
     auto_declare<std::string>("magnetometer_sensor_name", "magnetometer_sensor");
+    auto_declare<double>("max_imu_dt", 0.5);
+    auto_declare<double>("beta", 0.1);
+    auto_declare<bool>("use_magnetometer", true);
+    auto_declare<double>("max_magnetometer_age", 0.1);
+    auto_declare<std::string>("frame_id", "imu_link");
+    auto_declare<double>("orientation_stddev", 0.02);
   } catch (const std::exception & exception) {
     RCLCPP_ERROR(
       get_node()->get_logger(),
@@ -62,8 +68,7 @@ controller_interface::CallbackReturn MadgwickController::on_configure(
   const rclcpp_lifecycle::State &)
 {
   imu_sensor_name_ = get_node()->get_parameter("imu_sensor_name").as_string();
-  magnetometer_sensor_name_ =
-    get_node()->get_parameter("magnetometer_sensor_name").as_string();
+  magnetometer_sensor_name_ = get_node()->get_parameter("magnetometer_sensor_name").as_string();
 
   if (imu_sensor_name_.empty() || magnetometer_sensor_name_.empty()) {
     RCLCPP_ERROR(
@@ -72,6 +77,69 @@ controller_interface::CallbackReturn MadgwickController::on_configure(
     return controller_interface::CallbackReturn::ERROR;
   }
 
+  max_imu_dt_ = get_node()->get_parameter("max_imu_dt").as_double();
+  if (!std::isfinite(max_imu_dt_) || max_imu_dt_ <= 0.0) {
+    RCLCPP_ERROR(
+      get_node()->get_logger(),
+      "max_imu_dt must be a positive finite value, got %f", max_imu_dt_);
+    return controller_interface::CallbackReturn::ERROR;
+  }
+
+  const double beta = get_node()->get_parameter("beta").as_double();
+  if (!std::isfinite(beta) || beta < 0.0) {
+    RCLCPP_ERROR(
+      get_node()->get_logger(),
+      "beta must be a non-negative finite value, got %f", beta);
+    return controller_interface::CallbackReturn::ERROR;
+  }
+  filter_.set_beta(beta);
+
+  use_magnetometer_ = get_node()->get_parameter("use_magnetometer").as_bool();
+
+  max_magnetometer_age_ = get_node()->get_parameter("max_magnetometer_age").as_double();
+  if (!std::isfinite(max_magnetometer_age_) || max_magnetometer_age_ <= 0.0) {
+    RCLCPP_ERROR(
+      get_node()->get_logger(),
+      "max_magnetometer_age must be a positive finite value, got %f", max_magnetometer_age_);
+    return controller_interface::CallbackReturn::ERROR;
+  }
+
+  frame_id_ = get_node()->get_parameter("frame_id").as_string();
+
+  orientation_stddev_ = get_node()->get_parameter("orientation_stddev").as_double();
+  if (!std::isfinite(orientation_stddev_) || orientation_stddev_ < 0.0) {
+    RCLCPP_ERROR(
+      get_node()->get_logger(),
+      "orientation_stddev must be a non-negative finite value, got %f", orientation_stddev_);
+    return controller_interface::CallbackReturn::ERROR;
+  }
+
+  try {
+    imu_publisher_ = get_node()->create_publisher<ImuMsg>("~/imu", rclcpp::SystemDefaultsQoS());
+    realtime_imu_publisher_ = std::make_unique<ImuPublisher>(imu_publisher_);
+  } catch (const std::exception & exception) {
+    RCLCPP_ERROR(
+      get_node()->get_logger(),
+      "Failed to create the orientation publisher: %s", exception.what());
+    return controller_interface::CallbackReturn::ERROR;
+  }
+
+  // Fields that never change are filled once, outside the real-time loop.
+  realtime_imu_publisher_->lock();
+  auto & msg = realtime_imu_publisher_->msg_;
+  msg.header.frame_id = frame_id_;
+  msg.orientation_covariance.fill(0.0);
+  const double orientation_variance = orientation_stddev_ * orientation_stddev_;
+  msg.orientation_covariance[0] = orientation_variance;
+  msg.orientation_covariance[4] = orientation_variance;
+  msg.orientation_covariance[8] = orientation_variance;
+  realtime_imu_publisher_->unlock();
+
+  RCLCPP_INFO(
+    get_node()->get_logger(),
+    "MadgwickController configured: beta=%.3f, use_magnetometer=%s, frame_id='%s'",
+    beta, use_magnetometer_ ? "true" : "false", frame_id_.c_str());
+
   state_interfaces_mapped_ = false;
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -79,6 +147,10 @@ controller_interface::CallbackReturn MadgwickController::on_configure(
 controller_interface::CallbackReturn MadgwickController::on_activate(
   const rclcpp_lifecycle::State &)
 {
+  // Every activation starts from the identity orientation and waits for a
+  // first IMU sample to use as time reference.
+  filter_.reset();
+  has_last_imu_sample_time_ = false;
   state_interfaces_mapped_ = false;
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -111,17 +183,14 @@ controller_interface::return_type MadgwickController::update(
   acceleration_z_ = read_interface(state_interface_indices_.acceleration_z);
 
   imu_sample_time_sec_ = read_interface(state_interface_indices_.imu_sample_time_sec);
-  imu_sample_time_nanosec_ =
-    read_interface(state_interface_indices_.imu_sample_time_nanosec);
+  imu_sample_time_nanosec_ = read_interface(state_interface_indices_.imu_sample_time_nanosec);
 
   magnetic_field_x_ = read_interface(state_interface_indices_.magnetic_field_x);
   magnetic_field_y_ = read_interface(state_interface_indices_.magnetic_field_y);
   magnetic_field_z_ = read_interface(state_interface_indices_.magnetic_field_z);
 
-  magnetometer_sample_time_sec_ =
-    read_interface(state_interface_indices_.magnetometer_sample_time_sec);
-  magnetometer_sample_time_nanosec_ =
-    read_interface(state_interface_indices_.magnetometer_sample_time_nanosec);
+  magnetometer_sample_time_sec_ = read_interface(state_interface_indices_.magnetometer_sample_time_sec);
+  magnetometer_sample_time_nanosec_ = read_interface(state_interface_indices_.magnetometer_sample_time_nanosec);
 
   const double values[] = {
     gyro_x_, gyro_y_, gyro_z_,
@@ -141,8 +210,81 @@ controller_interface::return_type MadgwickController::update(
     }
   }
 
-  // The Madgwick filter will consume these values in a later commit.
+  // The integration step is driven by the IMU sample time, so the filter only
+  // advances when the hardware reports a new IMU sample.
+  const double imu_sample_time = imu_sample_time_sec_ + imu_sample_time_nanosec_ * 1.0e-9;
+
+  if (!has_last_imu_sample_time_) {
+    last_imu_sample_time_ = imu_sample_time;
+    has_last_imu_sample_time_ = true;
+    return controller_interface::return_type::OK;
+  }
+
+  const double dt = imu_sample_time - last_imu_sample_time_;
+
+  if (dt == 0.0) {
+    // No new IMU sample since the previous update.
+    return controller_interface::return_type::OK;
+  }
+
+  if (dt < 0.0 || dt > max_imu_dt_) {
+    RCLCPP_WARN_THROTTLE(
+      get_node()->get_logger(),
+      *get_node()->get_clock(),
+      1000,
+      "Invalid IMU dt (%f s, max %f s); resetting time reference without integrating",
+      dt, max_imu_dt_);
+    last_imu_sample_time_ = imu_sample_time;
+    return controller_interface::return_type::OK;
+  }
+
+  last_imu_sample_time_ = imu_sample_time;
+
+  // The magnetometer is only used when enabled and when its last sample is
+  // close in time to the IMU sample (a stale field would bias the yaw).
+  const double magnetometer_sample_time = magnetometer_sample_time_sec_ + magnetometer_sample_time_nanosec_ * 1.0e-9;
+  const bool magnetometer_is_fresh = std::abs(imu_sample_time - magnetometer_sample_time) <= max_magnetometer_age_;
+
+  MadgwickFilter::SensorSample sample;
+  sample.gyroscope = {gyro_x_, gyro_y_, gyro_z_};
+  sample.acceleration = {acceleration_x_, acceleration_y_, acceleration_z_};
+  sample.magnetic_field = {magnetic_field_x_, magnetic_field_y_, magnetic_field_z_};
+  sample.use_magnetic_field = use_magnetometer_ && magnetometer_is_fresh;
+
+  filter_.update(sample, dt);
+
+  publish_orientation();
+
   return controller_interface::return_type::OK;
+}
+
+void MadgwickController::publish_orientation()
+{
+  if (!realtime_imu_publisher_ || !realtime_imu_publisher_->trylock()) {
+    return;
+  }
+
+  auto & msg = realtime_imu_publisher_->msg_;
+
+  // Stamp with the IMU sample time, consistent with the dt used by the filter.
+  msg.header.stamp.sec = static_cast<int32_t>(imu_sample_time_sec_);
+  msg.header.stamp.nanosec = static_cast<uint32_t>(imu_sample_time_nanosec_);
+
+  const auto & orientation = filter_.orientation();
+  msg.orientation.w = orientation.w();
+  msg.orientation.x = orientation.x();
+  msg.orientation.y = orientation.y();
+  msg.orientation.z = orientation.z();
+
+  msg.angular_velocity.x = gyro_x_;
+  msg.angular_velocity.y = gyro_y_;
+  msg.angular_velocity.z = gyro_z_;
+
+  msg.linear_acceleration.x = acceleration_x_;
+  msg.linear_acceleration.y = acceleration_y_;
+  msg.linear_acceleration.z = acceleration_z_;
+
+  realtime_imu_publisher_->unlockAndPublish();
 }
 
 bool MadgwickController::map_state_interfaces()

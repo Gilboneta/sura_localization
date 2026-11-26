@@ -1,9 +1,13 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include <string>
 
 #include "controller_interface/controller_interface.hpp"
+#include "realtime_tools/realtime_publisher.hpp"
+#include "sensor_msgs/msg/imu.hpp"
+#include "sura_localization/controllers/madgwick_filter.hpp"
 
 namespace sura_localization::controllers
 {
@@ -48,7 +52,12 @@ private:
     std::size_t magnetometer_sample_time_nanosec{};
   };
 
+  using ImuMsg = sensor_msgs::msg::Imu;
+  using ImuPublisher = realtime_tools::RealtimePublisher<ImuMsg>;
+
   bool map_state_interfaces();
+
+  void publish_orientation();
 
   std::string imu_sensor_name_;
   std::string magnetometer_sensor_name_;
@@ -68,6 +77,19 @@ private:
   double magnetic_field_z_{0.0};
   double magnetometer_sample_time_sec_{0.0};
   double magnetometer_sample_time_nanosec_{0.0};
+
+  MadgwickFilter filter_;
+  double max_imu_dt_{0.5};
+  double last_imu_sample_time_{0.0};
+  bool has_last_imu_sample_time_{false};
+
+  bool use_magnetometer_{true};
+  double max_magnetometer_age_{0.1};
+
+  std::string frame_id_;
+  double orientation_stddev_{0.02};
+  rclcpp::Publisher<ImuMsg>::SharedPtr imu_publisher_;
+  std::unique_ptr<ImuPublisher> realtime_imu_publisher_;
 };
 
 }  // namespace sura_localization::controllers
